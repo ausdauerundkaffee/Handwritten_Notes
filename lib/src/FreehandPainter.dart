@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 
 /// Subclass of [CustomPainter] to paint strokes
 class FreehandPainter extends CustomPainter {
-  final double distanceThreshold;
   final List<Stroke> strokes;
   final Color backgroundColor;
   final paintDarkgrey = Paint()
@@ -18,7 +17,6 @@ class FreehandPainter extends CustomPainter {
   FreehandPainter(
     this.strokes,
     this.backgroundColor,
-    {this.distanceThreshold = 20.0}
   );
 
   @override
@@ -30,10 +28,10 @@ class FreehandPainter extends CustomPainter {
       Paint()..color = backgroundColor,
     );
     
-    canvas.drawLine(Offset(size.width * .1, 0),
-      Offset(size.width * .1, size.height), paintPink);
+    canvas.drawLine(Offset(size.width * .05, 0),
+      Offset(size.width * .05, size.height), paintPink);
 
-    for(double i = 0.1; i<1.0; i = i+0.05 )
+    for(double i = 0.05; i<1.0; i = i+0.05 )
     {
       canvas.drawLine(Offset(0, size.height * i),
         Offset(size.width, size.height * i), paintDarkgrey);

@@ -7,6 +7,8 @@ import 'WhiteBoardController.dart';
 import 'package:flutter_handwritten_notes/src/Model.dart';
 import 'dart:developer';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_handwritten_notes/src/NavBar.dart';
+import 'package:flutter_handwritten_notes/src/GoogleDrive.dart';
 
 typedef OnRedoUndo = void Function(bool isUndoAvailable, bool isRedoAvailable);
 
@@ -33,7 +35,6 @@ class WhiteBoard extends StatefulWidget {
 
   /// This callback exposes if undo / redo is available and called successfully.
   final OnRedoUndo? onRedoUndo;
-
   const WhiteBoard({
     Key? key,
     this.controller,
@@ -53,8 +54,11 @@ class _WhiteBoardState extends State<WhiteBoard> {
   final _undoHistory = <RedoUndoHistory>[];
   final _redoStack = <RedoUndoHistory>[];
   final _strokes = <Stroke>[];
+  //double lastX =0;
+  //double lastY =0;
   // cached current canvas size
   late Size _canvasSize;
+  final _key = GlobalKey();
 
   // convert current canvas to image data.
   Future<void> _convertToImage(ImageByteFormat format) async {
@@ -121,8 +125,12 @@ class _WhiteBoardState extends State<WhiteBoard> {
       };
     super.initState();
   }
+
+  double _calculateDistance(Offset p1, Offset p2) {
+    return sqrt(pow(p2.dx - p1.dx, 2) + pow(p2.dy - p1.dy, 2));
+  }
+
   void _start(double startX, double startY) {
-    
     final newStroke = Stroke(
       color: widget.strokeColor,
       width: widget.strokeWidth,
@@ -142,71 +150,121 @@ class _WhiteBoardState extends State<WhiteBoard> {
       ),
     );
     _redoStack.clear();
-    widget.onRedoUndo?.call(_undoHistory.isNotEmpty, _redoStack.isNotEmpty);  
+    widget.onRedoUndo?.call(_undoHistory.isNotEmpty, _redoStack.isNotEmpty);
   }
 
   void _add(double x, double y) {
-      setState(() {
-          _strokes.last.path.lineTo(x, y);
-          
-        });
-     
-    
+    setState(() {
+      _strokes.last.path.lineTo(x, y);
+    });
   }
- bool _isStylusEvent(PointerEvent event) {
+
+  bool _isStylusEvent(PointerEvent event) {
     return event.kind == PointerDeviceKind.stylus ||
-           event.kind == PointerDeviceKind.mouse ||
-           (event.radiusMajor < 27.0 &&
+        event.kind == PointerDeviceKind.mouse ||
+        (event.radiusMajor < 27.0 &&
             event.tilt < (pi / 2) &&
-            event.size <= 0.1 );
+            event.size <= 0.1);
   }
+
   @override
   Widget build(BuildContext context) {
+    GoogleDrive _googleDrive = new GoogleDrive();
     Size size = MediaQuery.of(context).size;
-    return
-     Column(
-      children: [
-      Expanded(
-      child:  Container(
-      height: size.height,
-      width: size.width,
-      child: Listener(
-        onPointerDown: (event) {        
-          if(_isStylusEvent(event)){
-            double radiusMajor = event.radiusMajor;
-            debugPrint(radiusMajor.toString());
-              _start(
-                event.localPosition.dx,
-                event.localPosition.dy,
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Scaffold(
+        appBar: AppBar(
+          toolbarHeight: 24,
+          leading: Builder(
+            builder: (context) {
+              return IconButton(
+                icon: const Icon(Icons.menu),
+                onPressed: () {
+                  Scaffold.of(context).openDrawer();
+                },
+                padding: EdgeInsets.zero,
               );
-          }
-        },   
-        onPointerUp: (event) {
-          
-        },
-        onPointerMove: (event){
-         if(_isStylusEvent(event)){
-            double radiusMajor = event.radiusMajor;
-            debugPrint(radiusMajor.toString());
-            _add(
-              event.localPosition.dx,
-              event.localPosition.dy,
-            );
-          }
-        },     
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            _canvasSize = Size(constraints.maxWidth, constraints.maxHeight);
-            return CustomPaint(
-              painter: FreehandPainter(_strokes, widget.backgroundColor),
-             );
             },
           ),
         ),
+        body: Column(
+          children: [
+            Expanded(
+              child: Container(
+                height: size.height,
+                width: size.width,
+                child: Listener(
+                  onPointerDown: (event) {
+                    if (_isStylusEvent(event)) {
+                      double radiusMajor = event.radiusMajor;
+                      debugPrint(radiusMajor.toString());
+                      _start(
+                        event.localPosition.dx,
+                        event.localPosition.dy,
+                      );
+                    }
+                  },
+                  onPointerUp: (event) {},
+                  onPointerMove: (event) {
+                    if (_isStylusEvent(event)) {
+                      double radiusMajor = event.radiusMajor;
+                      debugPrint(radiusMajor.toString());
+                      _add(
+                        event.localPosition.dx,
+                        event.localPosition.dy,
+                      );
+                    }
+                  },
+                  child: LayoutBuilder(builder: (context, constraints) {
+                    _canvasSize =
+                        Size(constraints.maxWidth, constraints.maxHeight);
+                    return CustomPaint(
+                      painter:
+                          FreehandPainter(_strokes, widget.backgroundColor),
+                    );
+                  }),
+                ),
+              ),
+            ),
+          ],
+        ),
+        drawer: Drawer(
+          // Add a ListView to the drawer. This ensures the user can scroll
+          // through the options in the drawer if there isn't enough vertical
+          // space to fit everything.
+          child: ListView(
+            // Important: Remove any padding from the ListView.
+            padding: EdgeInsets.zero,
+            children: [
+              const DrawerHeader(
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                ),
+                child: Text('Drawer Header'),
+              ),
+              ListTile(
+                title: const Text('Home'),
+                onTap: () {
+                  // Update the state of the app
+                  //_onItemTapped(0);
+                  // Then close the drawer
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: const Text('Upload'),
+                onTap: () {
+                  // Update the state of the app
+                  //_onItemTapped(0);
+                  // Then close the drawer
+                 //_googleDrive.uploadFileToGoogleDrive()
+                },
+              ),
+            ],
+          ),
+        ),
       ),
-    ),
-    ],
     );
   }
-
 }
