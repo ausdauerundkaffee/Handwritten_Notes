@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui';
@@ -9,7 +10,9 @@ import 'dart:developer';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_handwritten_notes/src/NavBar.dart';
 import 'package:flutter_handwritten_notes/src/GoogleDrive.dart';
-
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 typedef OnRedoUndo = void Function(bool isUndoAvailable, bool isRedoAvailable);
 
 /// Whiteboard widget for canvas
@@ -61,7 +64,7 @@ class _WhiteBoardState extends State<WhiteBoard> {
   final _key = GlobalKey();
 
   // convert current canvas to image data.
-  Future<void> _convertToImage(ImageByteFormat format) async {
+  Future<File> _convertToImage(ImageByteFormat format) async {
     final recorder = PictureRecorder();
     final canvas = Canvas(recorder);
 
@@ -80,8 +83,24 @@ class _WhiteBoardState extends State<WhiteBoard> {
     // Cast image data to byte array with converting to given format
     final converted =
         (await result.toByteData(format: format))!.buffer.asUint8List();
+    final pdf = pw.Document();
+      final imageProvider = pw.MemoryImage(converted);
 
-    widget.onConvertImage?.call(converted);
+      pdf.addPage(
+        pw.Page(
+          build: (pw.Context context) => pw.Center(
+            child: pw.Image(imageProvider),
+          ),
+        ),
+      );
+
+      final output = await getApplicationDocumentsDirectory();
+      final file = File("${output.path}/drawing.pdf");
+      await file.writeAsBytes(await pdf.save());
+
+     widget.onConvertImage?.call(converted);
+     debugPrint("${output.path}/drawing.pdf");
+    return file;
   }
 
   @override
@@ -169,13 +188,13 @@ class _WhiteBoardState extends State<WhiteBoard> {
 
   @override
   Widget build(BuildContext context) {
-    GoogleDrive _googleDrive = new GoogleDrive();
+    GoogleDrive _googleSignIn;
     Size size = MediaQuery.of(context).size;
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Scaffold(
         appBar: AppBar(
-          toolbarHeight: 24,
+          toolbarHeight: IconTheme.of(context).size ?? 24,
           leading: Builder(
             builder: (context) {
               return IconButton(
@@ -252,13 +271,15 @@ class _WhiteBoardState extends State<WhiteBoard> {
                   Navigator.pop(context);
                 },
               ),
-              ListTile(
+              ListTile (
                 title: const Text('Upload'),
-                onTap: () {
+                onTap: () async {
                   // Update the state of the app
                   //_onItemTapped(0);
                   // Then close the drawer
-                 //_googleDrive.uploadFileToGoogleDrive()
+                  File savedFile = await _convertToImage(ImageByteFormat.png);
+                  _googleSignIn= GoogleDrive();
+                  _googleSignIn.authenticate(savedFile);
                 },
               ),
             ],

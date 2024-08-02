@@ -1,126 +1,253 @@
-import 'dart:io';
-import 'package:googleapis/drive/v3.dart' as ga;
-import 'package:googleapis_auth/auth_io.dart';
+import 'dart:convert';
+
+import 'package:flutter/cupertino.dart';
+import 'dart:io' as io;
+import 'package:flutter/scheduler.dart';
 import 'package:http/http.dart' as http;
-import 'package:path/path.dart' as p;
-import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_web_auth/flutter_web_auth.dart';
+import 'package:googleapis/drive/v3.dart' as drive;
+import 'package:googleapis_auth/auth_io.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:googleapis/drive/v3.dart';
+/*class GoogleHttpClient extends http.BaseClient {
+  final Map<String, String> headers;
 
-class SecureStorage {
-  final storage = FlutterSecureStorage();
+  final http.Client _inner = http.Client();
 
-  //Save Credentials
-  Future saveCredentials(AccessToken token, String refreshToken) async {
-    print(token.expiry.toIso8601String());
-    await storage.write(key: "type", value: token.type);
-    await storage.write(key: "data", value: token.data);
-    await storage.write(key: "expiry", value: token.expiry.toString());
-    await storage.write(key: "refreshToken", value: refreshToken);
+  GoogleHttpClient(this.headers);
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    return _inner.send(request..headers.addAll(headers));
   }
 
-  //Get Saved Credentials
-  Future<Map<String, dynamic>?> getCredentials() async {
-    var result = await storage.readAll();
-    if (result.isEmpty) return null;
-    return result;
-  }
-
-  //Clear Saved Credentials
-  Future clear() {
-    return storage.deleteAll();
+  @override
+  void close() {
+    _inner.close();
   }
 }
-const _clientId = "935194572765-klink9jd3ctrod71uupk64q0cf6h1d3s.apps.googleusercontent.com";
-const _clientSecret = "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";
-const _scopes = ['https://www.googleapis.com/auth/drive.file'];
 class GoogleDrive {
-  final storage = SecureStorage();
-  //Get Authenticated Http Client
-  Future<http.Client> getHttpClient() async {
-    //Get Credentials
-    var credentials = await storage.getCredentials();
-    if (credentials == null) {
-      //Needs user authentication
-      var authClient = await clientViaUserConsent(
-          ClientId(_clientId),_scopes, (url) {
-        //Open Url in Browser
-        launch(url);
-      });
-      //Save Credentials
-      await storage.saveCredentials(authClient.credentials.accessToken,
-          authClient.credentials.refreshToken!);
-      return authClient;
-    } else {
-      print(credentials["expiry"]);
-      //Already authenticated
-      return authenticatedClient(
-          http.Client(),
-          AccessCredentials(
-              AccessToken(credentials["type"], credentials["data"],
-                  DateTime.tryParse(credentials["expiry"])!),
-              credentials["refreshToken"],
-              _scopes));
+  final _clientId =
+      "935194572765-klink9jd3ctrod71uupk64q0cf6h1d3s.apps.googleusercontent.com";
+  final _scopes = ['https://www.googleapis.com/auth/drive.file'];
+  final _redirectUri =
+      "com.googleusercontent.apps.935194572765-vaek2qh8onveln61lcr0epar0coabrvg:/oauth2redirect";
+  void authenticate(io.File file ) async {
+   /* final url = 'https://accounts.google.com/o/oauth2/auth?response_type=code'
+        '&client_id=$_clientId'
+        '&redirect_uri=$_redirectUri'
+        '&scope=${_scopes.join(' ')}';
+
+    final result = await FlutterWebAuth.authenticate(
+      url: url,
+      callbackUrlScheme:
+          'com.googleusercontent.apps.935194572765-vaek2qh8onveln61lcr0epar0coabrvg',
+    );
+
+    final code = Uri.parse(result).queryParameters['code'];
+    // Use the code to obtain tokens
+    debugPrint('Authorization code: $code');
+    // Exchange authorization code for access token
+    //Uri newUri = Uri(path: 'https://oauth2.googleapis.com/token');
+    final response = await http.post(
+      Uri.parse('https://oauth2.googleapis.com/token'),
+      body: {
+        'code': code,
+        'client_id': _clientId,
+        'client_secret': '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',
+        'redirect_uri': _redirectUri,
+        'grant_type': 'authorization_code',
+      },
+    );
+
+    // Parse access token from response
+    final accessToken = json.decode(response.body)['access_token'];
+    debugPrint('Response body: ${response.body}');
+    debugPrint(accessToken);
+    // Initialize the client
+    final client = http.Client();
+    final authClient = authenticatedClient(
+      client,
+      AccessCredentials(
+        accessToken,
+        null,
+        ['https://www.googleapis.com/auth/drive'],
+      ),
+  );*/
+  debugPrint("Will sign in ");
+ 
+    try{
+       final googleAuthData = await GoogleSignIn(
+     clientId: "935194572765-vaek2qh8onveln61lcr0epar0coabrvg.apps.googleusercontent.com",
+      scopes: [
+        'https://www.googleapis.com/auth/drive',
+      ],
+    ).signIn();
+  
+
+
+    if(googleAuthData==null){
+      debugPrint("googleAuthData is null");
+      return;
+    }
+     final client = GoogleHttpClient(
+        await googleAuthData.authHeaders
+    );
+    //_inner.send(request..headers.addAll(googleAuthData.authHeaders));
+  
+
+    // Initialize the Drive API
+    final driveApi = drive.DriveApi(client);
+    // Prepare the file metadata
+    final fileToUpload = drive.File()..name = file.path.split('/').last;
+
+    // Create media from the file
+    final media = drive.Media(file.openRead(), file.lengthSync());
+    
+    try {
+      // Upload the file
+      await driveApi.files.create(fileToUpload, uploadMedia: media);
+        debugPrint('File uploaded successfully!');
+    } catch (e) {
+        debugPrint('Error uploading file: $e');
+    } finally {
+      // Close the HTTP client
+      client.close();
+    }
+    }
+      catch (e) {
+        debugPrint('Error uploading file: $e');
     }
   }
+}*/
+class GoogleDrive {
+  // "935194572765-klink9jd3ctrod71uupk64q0cf6h1d3s.apps.googleusercontent.com";
+  final _clientId =
+     
+      "935194572765-vaek2qh8onveln61lcr0epar0coabrvg.apps.googleusercontent.com";
+  final _scopes = ['https://www.googleapis.com/auth/drive.file'];
+  final _redirectUri =
+      "com.googleusercontent.apps.935194572765-vaek2qh8onveln61lcr0epar0coabrvg:/oauth2redirect";
+  void authenticate(io.File file ) async {
+    final url = 'https://accounts.google.com/o/oauth2/auth?response_type=code'
+        '&client_id=$_clientId'
+        '&redirect_uri=$_redirectUri'
+        '&scope=${_scopes.join(' ')}';
 
-// check if the directory forlder is already available in drive , if available return its id
-// if not available create a folder in drive and return id
-//   if not able to create id then it means user authetication has failed
-  Future<String?> _getFolderId(ga.DriveApi driveApi) async {
-    final mimeType = "application/vnd.google-apps.folder";
-    String folderName = "personalDiaryBackup";
+    final result = await FlutterWebAuth.authenticate(
+      url: url,
+      callbackUrlScheme:
+      'com.googleusercontent.apps.935194572765-vaek2qh8onveln61lcr0epar0coabrvg',
+         
+    );
+// 'com.googleusercontent.apps.935194572765-vaek2qh8onveln61lcr0epar0coabrvg',
+    final code = Uri.parse(result).queryParameters['code'];
+    // Use the code to obtain tokens
+    debugPrint('Authorization code: $code');
+    // Exchange authorization code for access token
+    //Uri newUri = Uri(path: 'https://oauth2.googleapis.com/token');
+    // 'client_secret': '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',
+    final response = await http.post(
+      Uri.parse('https://oauth2.googleapis.com/token'),
+      body: {
+        'code': code,
+        'client_id': _clientId,
+       
+        'redirect_uri': _redirectUri,
+        'grant_type': 'authorization_code',
+      },
+    );
+
+    // Parse access token from response
+    final accessToken = json.decode(response.body)['access_token'];
+    debugPrint('Response body: ${response.body}');
+    debugPrint(accessToken);
+    // Initialize the client
+    final client = http.Client();
+    final accessTokenObj = AccessToken(
+  'Bearer', // The type of token, usually 'Bearer'
+  accessToken, // The actual access token string
+  DateTime.now().add(Duration(hours: 1)).toUtc(), // The expiry date and time
+);
+    final authClient = authenticatedClient(
+      client,
+      AccessCredentials(
+        accessTokenObj,
+        null,
+        ['https://www.googleapis.com/auth/drive'],
+      ),
+  );
+    debugPrint('Authenticated'); 
+    // Initialize the Drive API
+    final driveApi = drive.DriveApi(authClient);
+    // Prepare the file metadata
+    final fileToUpload = drive.File()..name = file.path.split('/').last;
+
+    // Create media from the file
+    final media = drive.Media(file.openRead(), file.lengthSync());
 
     try {
-      final found = await driveApi.files.list(
-        q: "mimeType = '$mimeType' and name = '$folderName'",
-        $fields: "files(id, name)",
-      );
-      final files = found.files;
-      if (files == null) {
-        print("Sign-in first Error");
-        return null;
-      }
-
-      // The folder already exists
-      if (files.isNotEmpty) {
-        return files.first.id;
-      }
-
-      // Create a folder
-      ga.File folder = ga.File();
-      folder.name = folderName;
-      folder.mimeType = mimeType;
-      final folderCreation = await driveApi.files.create(folder);
-      print("Folder ID: ${folderCreation.id}");
-
-      return folderCreation.id;
+      // Upload the file
+      await driveApi.files.create(fileToUpload, uploadMedia: media);
+        debugPrint('File uploaded successfully!');
     } catch (e) {
-      print(e);
-      return null;
+        debugPrint('Error uploading file: $e');
+    } finally {
+      // Close the HTTP client
+      client.close();
     }
   }
-
-  
-  uploadFileToGoogleDrive(File file) async {
-    var client = await getHttpClient();
-    var drive = ga.DriveApi(client);
-    String? folderId =  await _getFolderId(drive);
-    if(folderId == null){
-      print("Sign-in first Error");
-    }else {
-      ga.File fileToUpload = ga.File();
-      fileToUpload.parents = [folderId];
-      fileToUpload.name = p.basename(file.absolute.path);
-      var response = await drive.files.create(
-        fileToUpload,
-        uploadMedia: ga.Media(file.openRead(), file.lengthSync()),
-      );
-      print(response);
-    }
-
-  }
-
-
-
-
 }
+/*class GoogleHttpClient extends http.BaseClient {
+  final Map<String, String> headers;
+
+  final http.Client _inner = http.Client();
+
+  GoogleHttpClient(this.headers);
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    return _inner.send(request..headers.addAll(headers));
+  }
+
+  @override
+  void close() {
+    _inner.close();
+  }
+}
+
+class GoogleDrive {
+ DriveApi? driveApi;
+ io.File localFile;
+ GoogleDrive(this.localFile);
+  Future<void> SetDrive() async {
+    final googleAuthData = await GoogleSignIn(
+      scopes: [
+        'sandrahanyshinuda@gmail.com',
+        'https://www.googleapis.com/auth/drive',
+      ],
+    ).signIn();
+    
+    if (googleAuthData == null) {
+      return;
+    }
+
+    final client = GoogleHttpClient(
+        await googleAuthData.authHeaders
+    );
+    driveApi = DriveApi(client);
+
+      // Prepare the file metadata
+    final gDriveFile = drive.File()..name = localFile.path.split('/').last;
+
+    try{
+  await driveApi!.files.create(
+      gDriveFile,
+      uploadMedia: Media(localFile.openRead(), localFile.lengthSync()),
+    );
+  } catch (err){
+    debugPrint('G-Drive Error : $err');
+  }
+}
+}
+*/
