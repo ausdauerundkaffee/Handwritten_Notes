@@ -57,8 +57,6 @@ class _WhiteBoardState extends State<WhiteBoard> {
   final _undoHistory = <RedoUndoHistory>[];
   final _redoStack = <RedoUndoHistory>[];
   final _strokes = <Stroke>[];
-  //double lastX =0;
-  //double lastY =0;
   // cached current canvas size
   late Size _canvasSize;
   final _key = GlobalKey();
@@ -261,6 +259,15 @@ class _WhiteBoardState extends State<WhiteBoard> {
                   color: Colors.blue,
                 ),
                 child: Text('Drawer Header'),
+              ),
+              ListTile(
+                title: const Text('Home'),
+                onTap: () {
+                  // Update the state of the app
+                  //_onItemTapped(0);
+                  // Then close the drawer
+                  Navigator.pop(context);
+                },
               ),
               ListTile(
                 title: const Text('Home'),
