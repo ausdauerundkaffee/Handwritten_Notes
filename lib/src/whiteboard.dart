@@ -13,6 +13,8 @@ import 'package:flutter_handwritten_notes/src/GoogleDrive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:path/path.dart' as path;
+
 typedef OnRedoUndo = void Function(bool isUndoAvailable, bool isRedoAvailable);
 
 /// Whiteboard widget for canvas
@@ -57,12 +59,14 @@ class _WhiteBoardState extends State<WhiteBoard> {
   final _undoHistory = <RedoUndoHistory>[];
   final _redoStack = <RedoUndoHistory>[];
   final _strokes = <Stroke>[];
+  String fileName='';
   // cached current canvas size
   late Size _canvasSize;
   final _key = GlobalKey();
 
   // convert current canvas to image data.
-  Future<File> _convertToImage(ImageByteFormat format) async {
+  Future<File> _convertToImage(ImageByteFormat format, String fileName) async {
+    debugPrint(fileName);
     final recorder = PictureRecorder();
     final canvas = Canvas(recorder);
 
@@ -82,22 +86,24 @@ class _WhiteBoardState extends State<WhiteBoard> {
     final converted =
         (await result.toByteData(format: format))!.buffer.asUint8List();
     final pdf = pw.Document();
-      final imageProvider = pw.MemoryImage(converted);
+    final imageProvider = pw.MemoryImage(converted);
 
-      pdf.addPage(
-        pw.Page(
-          build: (pw.Context context) => pw.Center(
-            child: pw.Image(imageProvider),
-          ),
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context context) => pw.Center(
+          child: pw.Image(imageProvider),
         ),
-      );
+      ),
+    );
 
-      final output = await getApplicationDocumentsDirectory();
-      final file = File("${output.path}/drawing.pdf");
-      await file.writeAsBytes(await pdf.save());
+    final output = await getApplicationDocumentsDirectory();
+    final filePath = path.join(output.path, "$fileName.pdf");
+    final file = File(filePath);
+    //final file = File("freehandpainter/drawing.pdf");
+    await file.writeAsBytes(await pdf.save());
 
-     widget.onConvertImage?.call(converted);
-     debugPrint("${output.path}/drawing.pdf");
+    widget.onConvertImage?.call(converted);
+    //debugPrint("${output.path}/drawing.pdf");
     return file;
   }
 
@@ -261,12 +267,48 @@ class _WhiteBoardState extends State<WhiteBoard> {
                 child: Text('Drawer Header'),
               ),
               ListTile(
-                title: const Text('Home'),
-                onTap: () {
-                  // Update the state of the app
-                  //_onItemTapped(0);
-                  // Then close the drawer
-                  Navigator.pop(context);
+                title: const Text('Rename'),
+                onTap:
+                    // Update the state of the app
+                    //_onItemTapped(0);
+                    // Then close the drawer
+                    () async {
+                  // Show the dialog and wait for the entered text
+                  final newName = await showDialog<String>(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: Text('Enter new name'),
+                        content: TextField(
+                          onChanged: (value) {
+                            fileName = value;
+                          },
+                        ),
+                        actions: <Widget>[
+                          TextButton(
+                            child: Text('Cancel'),
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                          TextButton(
+                            child: Text('Save'),
+                            onPressed: () {
+                              Navigator.of(context).pop(fileName);
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                  setState(() {
+                      if (newName != null && newName.isNotEmpty) {  
+                    fileName = newName;
+                      }
+                  });
+                 debugPrint(newName);
+                 debugPrint(fileName);
+                 // Navigator.of(context).pop();
                 },
               ),
               ListTile(
@@ -278,15 +320,18 @@ class _WhiteBoardState extends State<WhiteBoard> {
                   Navigator.pop(context);
                 },
               ),
-              ListTile (
+              ListTile(
                 title: const Text('Upload'),
                 onTap: () async {
                   // Update the state of the app
                   //_onItemTapped(0);
                   // Then close the drawer
-                  File savedFile = await _convertToImage(ImageByteFormat.png);
-                  _googleSignIn= GoogleDrive();
+                  debugPrint( fileName);
+                  File savedFile = await _convertToImage(
+                      ImageByteFormat.png, fileName);
+                  _googleSignIn = GoogleDrive();
                   _googleSignIn.authenticate(savedFile);
+                  Navigator.of(context).pop();
                 },
               ),
             ],

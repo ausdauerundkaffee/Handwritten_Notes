@@ -10,8 +10,8 @@ class WhiteBoardController {
 
   /// Convert [Whiteboard] into image data with given format.
   /// You can obtain converted image data via [onConvert] property of [Crop].
-  void convertToImage({ImageByteFormat format = ImageByteFormat.png}) =>
-      delegate.saveAsImage(format);
+  void convertToImage({ImageByteFormat format = ImageByteFormat.png , String fileName = "hg"}) =>
+      delegate.saveAsImage(format,fileName);
 
   /// Undo last stroke
   /// Return [false] if there is no stroke to undo, otherwise return [true].
@@ -26,7 +26,7 @@ class WhiteBoardController {
 }
 
 class WhiteBoardControllerDelegate {
-  late Future<void> Function(ImageByteFormat format) saveAsImage;
+  late Future<void> Function(ImageByteFormat format, String fileName) saveAsImage;
 
   late bool Function() onUndo;
 

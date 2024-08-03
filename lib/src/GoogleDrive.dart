@@ -16,12 +16,14 @@ class GoogleDrive {
   final _scopes = ['https://www.googleapis.com/auth/drive.file'];
   final _redirectUri =
       "com.googleusercontent.apps.935194572765-vaek2qh8onveln61lcr0epar0coabrvg:/oauth2redirect";
+  
   void authenticate(io.File file) async {
     var client = http.Client();
     var accessTokenObj;
-    var credentials = await storage.getCredentials();
+    //var credentials = await storage.getCredentials();
     var authClient;
-    if (credentials == null) {
+    //if (credentials == null) {
+      debugPrint("not found in storage");
       final url = 'https://accounts.google.com/o/oauth2/auth?response_type=code'
           '&client_id=$_clientId'
           '&redirect_uri=$_redirectUri'
@@ -54,7 +56,7 @@ class GoogleDrive {
         'Bearer', // The type of token, usually 'Bearer'
         accessToken, // The actual access token string
         DateTime.now()
-            .add(Duration(days: 40))
+            .add(Duration(days: 1))
             .toUtc(), // The expiry date and time
       );
       authClient = authenticatedClient(
@@ -67,9 +69,9 @@ class GoogleDrive {
       );
       debugPrint(json.decode(response.body)['refresh_token']);
       //  debugPrint( authClient.credentials.accessToken);
-      await storage.saveCredentials(
-          accessTokenObj, json.decode(response.body)['refresh_token']);
-    } else {
+     // await storage.saveCredentials(
+      //    accessTokenObj, json.decode(response.body)['refresh_token']);
+    /*} else {
       authClient = authenticatedClient(
         client,
         AccessCredentials(
@@ -79,7 +81,7 @@ class GoogleDrive {
           ['https://www.googleapis.com/auth/drive'],
         ),
       );
-    }
+    }*/
 
     debugPrint('Authenticated');
     // Initialize the Drive API
