@@ -87,7 +87,7 @@ class GoogleDrive {
     // Initialize the Drive API
     final driveApi = drive.DriveApi(authClient);
     // Prepare the file metadata
-    final fileToUpload = drive.File()..name = file.path.split('/').last;
+    final fileToUpload = drive.File()..name = file.path.split('/').last  ..parents = ["1yyszY-l7h5KsTp-poCSqMHB9vsed6cgJ"];
 
     // Create media from the file
     final media = drive.Media(file.openRead(), file.lengthSync());

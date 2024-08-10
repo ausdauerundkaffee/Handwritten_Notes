@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_handwritten_notes/src/Home.dart';
 import 'FreehandPainter.dart';
 import 'WhiteBoardController.dart';
 import 'package:flutter_handwritten_notes/src/Model.dart';
@@ -317,7 +318,13 @@ class _WhiteBoardState extends State<WhiteBoard> {
                   // Update the state of the app
                   //_onItemTapped(0);
                   // Then close the drawer
-                  Navigator.pop(context);
+                  
+                 // Home home = Home();
+                 // home.authenticate();
+                 Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => Home()),
+                 );
                 },
               ),
               ListTile(
