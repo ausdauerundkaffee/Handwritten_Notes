@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_handwritten_notes/src/Home.dart';
+import 'package:googleapis_auth/auth_io.dart';
 import 'FreehandPainter.dart';
 import 'WhiteBoardController.dart';
 import 'package:flutter_handwritten_notes/src/Model.dart';
@@ -15,7 +16,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path/path.dart' as path;
-
+import 'package:googleapis/drive/v3.dart' as drive;
 typedef OnRedoUndo = void Function(bool isUndoAvailable, bool isRedoAvailable);
 
 /// Whiteboard widget for canvas
@@ -41,7 +42,9 @@ class WhiteBoard extends StatefulWidget {
 
   /// This callback exposes if undo / redo is available and called successfully.
   final OnRedoUndo? onRedoUndo;
-  const WhiteBoard({
+  final _authClient ;
+  final _googleDrive;
+  const WhiteBoard(File currentfile ,this._authClient , this._googleDrive ,{
     Key? key,
     this.controller,
     this.backgroundColor = Colors.white,
@@ -64,6 +67,7 @@ class _WhiteBoardState extends State<WhiteBoard> {
   // cached current canvas size
   late Size _canvasSize;
   final _key = GlobalKey();
+
 
   // convert current canvas to image data.
   Future<File> _convertToImage(ImageByteFormat format, String fileName) async {
@@ -193,7 +197,7 @@ class _WhiteBoardState extends State<WhiteBoard> {
 
   @override
   Widget build(BuildContext context) {
-    GoogleDrive _googleSignIn;
+    
     Size size = MediaQuery.of(context).size;
     return Directionality(
       textDirection: TextDirection.ltr,
@@ -336,8 +340,8 @@ class _WhiteBoardState extends State<WhiteBoard> {
                   debugPrint( fileName);
                   File savedFile = await _convertToImage(
                       ImageByteFormat.png, fileName);
-                  _googleSignIn = GoogleDrive();
-                  _googleSignIn.authenticate(savedFile);
+                  
+                  widget._googleDrive.uploadFile(widget._authClient,savedFile);
                   Navigator.of(context).pop();
                 },
               ),

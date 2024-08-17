@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart'as material;
-import 'dart:io' as io;
-import 'package:flutter/scheduler.dart';
-import 'package:googleapis/calendar/v3.dart';
+import 'package:flutter/material.dart' as material;
+import 'package:flutter_handwritten_notes/src/File.dart';
+import 'package:flutter_handwritten_notes/src/GoogleDrive.dart';
+import 'package:flutter_handwritten_notes/src/whiteboard.dart';
 import 'package:googleapis/drive/v3.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_web_auth/flutter_web_auth.dart';
@@ -17,179 +17,85 @@ import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-class Home extends StatefulWidget{
+
+class Home extends StatefulWidget {
   @override
   State<StatefulWidget> createState() => _HomeState();
-  
-  final storage = SecureStorage();
-  final _clientId =
-      "935194572765-vaek2qh8onveln61lcr0epar0coabrvg.apps.googleusercontent.com";
-  final _scopes = ['https://www.googleapis.com/auth/drive.file'];
-  final _redirectUri =
-      "com.googleusercontent.apps.935194572765-vaek2qh8onveln61lcr0epar0coabrvg:/oauth2redirect";
-  Future<void> _downloadFile(drive.File file , DriveApi driveApi) async {
-    try{
-    final fileId = file.id!;
-    final fileName = file.name!;
-    Duration duration = const Duration(hours: 1);
-    final media = await driveApi.files.get(fileId, downloadOptions: drive.DownloadOptions.fullMedia).timeout(duration) as drive.Media;
-    final saveDir = await getApplicationDocumentsDirectory();
-    final savePath = '${saveDir.path}/$fileName';
-    final fileStream = io.File(savePath).openWrite();
-    media.stream.pipe(fileStream).whenComplete(() {
-      fileStream.close();
-      debugPrint('Downloaded $fileName to $savePath');
-    });
-    }
-    catch(e){
-      debugPrint(e.toString());
-      return;
-    }
-  }
-
-  void authenticate() async {
-    var client = http.Client();
-    var accessTokenObj;
-    //var credentials = await storage.getCredentials();
-    var authClient;
-    //if (credentials == null) {
-      debugPrint("not found in storage");
-      final url = 'https://accounts.google.com/o/oauth2/auth?response_type=code'
-          '&client_id=$_clientId'
-          '&redirect_uri=$_redirectUri'
-          '&scope=${_scopes.join(' ')}';
-
-      final result = await FlutterWebAuth.authenticate(
-        url: url,
-        callbackUrlScheme:
-            'com.googleusercontent.apps.935194572765-vaek2qh8onveln61lcr0epar0coabrvg',
-      );
-      final code = Uri.parse(result).queryParameters['code'];
-      debugPrint('Authorization code: $code');
-      final response = await http.post(
-        Uri.parse('https://oauth2.googleapis.com/token'),
-        body: {
-          'code': code,
-          'client_id': _clientId,
-          'redirect_uri': _redirectUri,
-          'grant_type': 'authorization_code',
-        },
-      );
-
-      // Parse access token from response
-      final accessToken = json.decode(response.body)['access_token'];
-      debugPrint('Response body: ${response.body}');
-      debugPrint(accessToken);
-      // Initialize the client
-
-      accessTokenObj = AccessToken(
-        'Bearer', // The type of token, usually 'Bearer'
-        accessToken, // The actual access token string
-        DateTime.now()
-            .add(Duration(days: 1))
-            .toUtc(), // The expiry date and time
-      );
-      authClient = authenticatedClient(
-        client,
-        AccessCredentials(
-          accessTokenObj,
-          null,
-          ['https://www.googleapis.com/auth/drive'],
-        ),
-      );
-      debugPrint(json.decode(response.body)['refresh_token']);
-      //  debugPrint( authClient.credentials.accessToken);
-     // await storage.saveCredentials(
-      //    accessTokenObj, json.decode(response.body)['refresh_token']);
-    /*} else {
-      authClient = authenticatedClient(
-        client,
-        AccessCredentials(
-          AccessToken(credentials["type"], credentials["data"],
-              DateTime.tryParse(credentials["expiry"])!),
-          credentials["refreshToken"],
-          ['https://www.googleapis.com/auth/drive'],
-        ),
-      );
-    }*/
-
-    debugPrint('Authenticated');
-    // Initialize the Drive API
-    final driveApi = drive.DriveApi(authClient);
-    // Prepare the file metadata
-
-    try {
-       String folderId = "1yyszY-l7h5KsTp-poCSqMHB9vsed6cgJ";
-    //final fileList = await driveApi.files.list(q: "mimeType='application/pdf'", spaces: 'drive');
-      var fileList = await driveApi.files.list(
-        q: "'$folderId' in parents and mimeType='application/pdf'",
-      );
-    for (var file in fileList.files ?? []) {
-      try{
-      await _downloadFile(file,driveApi );
-      }
-      catch(e){
-        debugPrint(e.toString());
-      }
-      finally{
-      
-      }
-    }
-      // Upload the file
-    //  await driveApi.files.get(fileToUpload, uploadMedia: media);
-     // debugPrint('File uploaded successfully!');
-    } catch (e) {
-      debugPrint('Error uploading file: $e');
-    } finally {
-      // Close the HTTP client
-      client.close();
-    }
-    debugPrint("finished downloading");
-  }
-
 }
-class _HomeState extends State<Home>{
 
-  
+class _HomeState extends State<Home> {
+  drive.FileList? driveFiles;
+  GoogleDrive _googleDrive = GoogleDrive();
+  late AuthClient authClient;
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        // Handle book tap, such as opening the book
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: material.Colors.black26,
-                    offset: Offset(0, 4),
-                    blurRadius: 4,
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: CachedNetworkImage(
-                  imageUrl: "dgD",
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            book.title,
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+    Size size = MediaQuery.of(context).size;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Library'),
       ),
+      body: Column(children: [
+        Expanded(
+          child: Container(
+              height: size.height,
+              width: size.width,
+              child: driveFiles != null
+                  ?  IconButton(
+            icon: Icon(Icons.edit),
+            onPressed: () async{
+             var downloadedFilePath = await _googleDrive.downloadFile(driveFiles!.files![0],authClient);
+              io.File currentDownlodedFile = io.File(downloadedFilePath);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => WhiteBoard(currentDownlodedFile, authClient, _googleDrive),
+                ),
+              );
+            }
+                  )
+                  : Text(
+                      "nothing",
+                      style: TextStyle(fontSize: 24, color: Colors.black),
+                    )),
+        ),
+      ]),
+      drawer: Drawer(
+          // Add a ListView to the drawer. This ensures the user can scroll
+          // through the options in the drawer if there isn't enough vertical
+          // space to fit everything.
+          child: ListView(
+              // Important: Remove any padding from the ListView.
+              padding: EdgeInsets.zero,
+              children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(
+                color: Colors.blue,
+              ),
+              child: Text('Drawer Header'),
+            ),
+            ListTile(
+                title: const Text('Sign In'),
+                onTap:
+                    // Update the state of the app
+                    //_onItemTapped(0);
+                    // Then close the drawer
+                    () async {
+                  AuthClient _authClient = await _googleDrive.authenticate();
+                  drive.FileList? _driveFiles =
+                      await _googleDrive.getFileList(_authClient);
+                  setState(() {
+                    authClient = _authClient;
+                    driveFiles = _driveFiles;
+                  });
+                  Navigator.of(context).pop();
+                })
+          ])),
     );
   }
 }
