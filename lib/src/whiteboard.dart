@@ -1,8 +1,9 @@
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
-import 'dart:ui';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_handwritten_notes/src/Home.dart';
 import 'package:googleapis_auth/auth_io.dart';
 import 'FreehandPainter.dart';
@@ -17,6 +18,9 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path/path.dart' as path;
 import 'package:googleapis/drive/v3.dart' as drive;
+import 'package:open_filex/open_filex.dart' as off;
+import 'dart:async' as ass;
+
 typedef OnRedoUndo = void Function(bool isUndoAvailable, bool isRedoAvailable);
 
 /// Whiteboard widget for canvas
@@ -42,9 +46,13 @@ class WhiteBoard extends StatefulWidget {
 
   /// This callback exposes if undo / redo is available and called successfully.
   final OnRedoUndo? onRedoUndo;
-  final _authClient ;
+  final _authClient;
   final _googleDrive;
-  const WhiteBoard(File currentfile ,this._authClient , this._googleDrive ,{
+
+  var currentfile = null;
+  WhiteBoard(
+    this._authClient,
+    this._googleDrive, {
     Key? key,
     this.controller,
     this.backgroundColor = Colors.white,
@@ -53,6 +61,7 @@ class WhiteBoard extends StatefulWidget {
     this.isErasing = false,
     this.onConvertImage,
     this.onRedoUndo,
+    this.currentfile,
   }) : super(key: key);
 
   @override
@@ -63,24 +72,22 @@ class _WhiteBoardState extends State<WhiteBoard> {
   final _undoHistory = <RedoUndoHistory>[];
   final _redoStack = <RedoUndoHistory>[];
   final _strokes = <Stroke>[];
-  String fileName='';
+  String fileName = '';
   // cached current canvas size
   late Size _canvasSize;
   final _key = GlobalKey();
-
-
+  late Widget _newWidget;
   // convert current canvas to image data.
-  Future<File> _convertToImage(ImageByteFormat format, String fileName) async {
+  Future<File> _convertToImage(
+      ui.ImageByteFormat format, String fileName) async {
     debugPrint(fileName);
-    final recorder = PictureRecorder();
+    final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
 
     // Emulate painting using _FreehandPainter
     // recorder will record this painting
-    FreehandPainter(
-      _strokes,
-      widget.backgroundColor,
-    ).paint(canvas, _canvasSize);
+    FreehandPainter(_strokes, widget.backgroundColor, widget.currentfile)
+        .paint(canvas, _canvasSize);
 
     // Stop emulating and convert to Image
     final result = await recorder
@@ -114,6 +121,15 @@ class _WhiteBoardState extends State<WhiteBoard> {
 
   @override
   void initState() {
+    FreehandPainter freehandPainter =
+        FreehandPainter(_strokes, widget.backgroundColor, widget.currentfile);
+    Widget newWidget = CustomPaint(
+      painter: freehandPainter,
+    );
+    setState(() {
+      _newWidget = newWidget;
+    });
+    mainFUn(freehandPainter);
     widget.controller?.delegate = WhiteBoardControllerDelegate()
       ..saveAsImage = _convertToImage
       ..onUndo = () {
@@ -151,6 +167,7 @@ class _WhiteBoardState extends State<WhiteBoard> {
         });
         widget.onRedoUndo?.call(_undoHistory.isNotEmpty, _redoStack.isNotEmpty);
       };
+
     super.initState();
   }
 
@@ -187,17 +204,45 @@ class _WhiteBoardState extends State<WhiteBoard> {
     });
   }
 
+  /*Future<ui.Image> OpenDownloadedFile(FreehandPainter freehandPainter) async {
+    String imagePath = await freehandPainter.loadPdf();
+    final data = await File(imagePath).readAsBytes();
+    final image = await decodeImageFromList(data);
+    return image;
+  }*/
+
   bool _isStylusEvent(PointerEvent event) {
-    return event.kind == PointerDeviceKind.stylus ||
-        event.kind == PointerDeviceKind.mouse ||
+    return event.kind == ui.PointerDeviceKind.stylus ||
+        event.kind == ui.PointerDeviceKind.mouse ||
         (event.radiusMajor < 27.0 &&
             event.tilt < (pi / 2) &&
             event.size <= 0.1);
   }
 
+  Future<void> mainFUn(FreehandPainter freehandPainter) async {
+    if (widget.currentfile != null) {
+       File newFile = await freehandPainter.loadPdf();
+    
+      Widget newWidget = Stack(
+        children: [
+          // Display the image from the file
+         
+          Image.file(newFile),
+          // Overlay custom drawings using CustomPaint
+          CustomPaint(
+            painter: freehandPainter,
+          ),
+        ],
+      );
+      debugPrint("finished assigning new widget");
+      setState(() {
+        _newWidget = newWidget;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    
     Size size = MediaQuery.of(context).size;
     return Directionality(
       textDirection: TextDirection.ltr,
@@ -247,10 +292,28 @@ class _WhiteBoardState extends State<WhiteBoard> {
                   child: LayoutBuilder(builder: (context, constraints) {
                     _canvasSize =
                         Size(constraints.maxWidth, constraints.maxHeight);
-                    return CustomPaint(
-                      painter:
-                          FreehandPainter(_strokes, widget.backgroundColor),
-                    );
+
+                    /* debugPrint("goto custom paint");
+                   Widget newWidget = CustomPaint(
+                        painter: freehandPainter,
+                      );
+                    if (widget.currentfile != null) {
+                     
+                      ()async{newWidget = await mainFUn(freehandPainter);
+                        debugPrint("got newWidget");
+                       return newWidget;
+                       }();
+                     
+                    } 
+                    else{
+                      return newWidget;
+                    }*/
+                    /* Future.delayed(Duration(seconds:30));
+                    debugPrint("goto return");
+                    return newWidget;*/
+
+                    debugPrint("will return newWidget");
+                    return _newWidget;
                   }),
                 ),
               ),
@@ -307,13 +370,13 @@ class _WhiteBoardState extends State<WhiteBoard> {
                     },
                   );
                   setState(() {
-                      if (newName != null && newName.isNotEmpty) {  
-                    fileName = newName;
-                      }
+                    if (newName != null && newName.isNotEmpty) {
+                      fileName = newName;
+                    }
                   });
-                 debugPrint(newName);
-                 debugPrint(fileName);
-                 // Navigator.of(context).pop();
+                  debugPrint(newName);
+                  debugPrint(fileName);
+                  // Navigator.of(context).pop();
                 },
               ),
               ListTile(
@@ -322,13 +385,13 @@ class _WhiteBoardState extends State<WhiteBoard> {
                   // Update the state of the app
                   //_onItemTapped(0);
                   // Then close the drawer
-                  
-                 // Home home = Home();
-                 // home.authenticate();
-                 Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => Home()),
-                 );
+
+                  // Home home = Home();
+                  // home.authenticate();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => Home()),
+                  );
                 },
               ),
               ListTile(
@@ -337,11 +400,10 @@ class _WhiteBoardState extends State<WhiteBoard> {
                   // Update the state of the app
                   //_onItemTapped(0);
                   // Then close the drawer
-                  debugPrint( fileName);
-                  File savedFile = await _convertToImage(
-                      ImageByteFormat.png, fileName);
-                  
-                  widget._googleDrive.uploadFile(widget._authClient,savedFile);
+                  debugPrint(fileName);
+                  File savedFile =
+                      await _convertToImage(ui.ImageByteFormat.png, fileName);
+                  widget._googleDrive.uploadFile(widget._authClient, savedFile);
                   Navigator.of(context).pop();
                 },
               ),

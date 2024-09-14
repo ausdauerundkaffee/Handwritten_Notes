@@ -384,6 +384,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.11.0"
+  open_filex:
+    dependency: "direct main"
+    description:
+      name: open_filex
+      sha256: ba425ea49affd0a98a234aa9344b9ea5d4c4f7625a1377961eae9fe194c3d523
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.5.0"
   path:
     dependency: "direct main"
     description:
@@ -456,6 +464,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.11.0"
+  pdf_render:
+    dependency: "direct main"
+    description:
+      name: pdf_render
+      sha256: bacd2ad8f4f4c9821827003065f5c2f9ca474dd418ff29c68272aab4c0e1e88b
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.4.12"
   pdfx:
     dependency: "direct main"
     description:

@@ -50,15 +50,15 @@ class _HomeState extends State<Home> {
             icon: Icon(Icons.edit),
             onPressed: () async{
              var downloadedFilePath = await _googleDrive.downloadFile(driveFiles!.files![0],authClient);
-              io.File currentDownlodedFile = io.File(downloadedFilePath);
+             // io.File currentDownlodedFile = io.File(downloadedFilePath);
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => WhiteBoard(currentDownlodedFile, authClient, _googleDrive),
+                  builder: (context) => WhiteBoard( authClient, _googleDrive , currentfile: downloadedFilePath),
                 ),
               );
             }
-                  )
+              )
                   : Text(
                       "nothing",
                       style: TextStyle(fontSize: 24, color: Colors.black),

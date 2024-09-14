@@ -45,6 +45,8 @@ dependencies:
   flutter_secure_storage: ^5.1.2
   path: ^1.9.0
   pdfx: ^2.6.0
+  open_filex: ^4.5.0
+  pdf_render: ^1.4.12
 dev_dependencies:
   flutter_test:
     sdk: flutter
