@@ -95,8 +95,10 @@ class _WhiteBoardState extends State<WhiteBoard> {
     debugPrint(fileName);
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
+    if(widget.currentfile != null){
     final image = await decodeImageFromList(await newFile!.readAsBytes());
     canvas.drawImage(image, Offset(0, 0), Paint());
+    }
     // Emulate painting using _FreehandPainter
     // recorder will record this painting
     FreehandPainter(_strokes, widget.backgroundColor, widget.currentfile)
@@ -115,6 +117,8 @@ class _WhiteBoardState extends State<WhiteBoard> {
 
     pdf.addPage(
       pw.Page(
+         margin: pw.EdgeInsets.zero,  //Remove all margins
+         pageFormat: PdfPageFormat(_canvasSize.width, _canvasSize.height),
         build: (pw.Context context) => pw.Center(
           child: pw.Image(imageProvider),
         ),
@@ -267,10 +271,15 @@ class _WhiteBoardState extends State<WhiteBoard> {
       setState(() {
         _newWidget = Stack(
           children: [
+            //Positioned.fill(child: 
             // Display the image from the file
             Image.file(
               newFile!,
+              width: _canvasSize.width,
+              height: _canvasSize.height,
+              
             ),
+            //),
             // Overlay custom drawings using CustomPaint
             CustomPaint(
               painter: freehandPainter,

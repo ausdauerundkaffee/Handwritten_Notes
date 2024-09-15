@@ -46,24 +46,40 @@ class _HomeState extends State<Home> {
               height: size.height,
               width: size.width,
               child: driveFiles != null
-                  ?  IconButton(
-            icon: Icon(Icons.edit),
-            onPressed: () async{
-             var downloadedFilePath = await _googleDrive.downloadFile(driveFiles!.files![0],authClient);
-             // io.File currentDownlodedFile = io.File(downloadedFilePath);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => WhiteBoard( authClient, _googleDrive , currentfile: downloadedFilePath),
-                ),
-              );
-            }
-              )
+                  ? IconButton(
+                      icon: Icon(Icons.edit),
+                      onPressed: () async {
+                        var downloadedFilePath = await _googleDrive
+                            .downloadFile(driveFiles!.files![0], authClient);
+                        // io.File currentDownlodedFile = io.File(downloadedFilePath);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => WhiteBoard(
+                                authClient, _googleDrive,
+                                currentfile: downloadedFilePath),
+                          ),
+                        );
+                      })
                   : Text(
                       "nothing",
                       style: TextStyle(fontSize: 24, color: Colors.black),
                     )),
         ),
+         IconButton( 
+                       icon:  Icon(Icons.add),
+                      onPressed: () async {
+                       
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => WhiteBoard(
+                                authClient, _googleDrive,
+                                ),
+                          ),
+                        );
+                      
+                      }),
       ]),
       drawer: Drawer(
           // Add a ListView to the drawer. This ensures the user can scroll
