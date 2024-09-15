@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
@@ -77,13 +78,25 @@ class _WhiteBoardState extends State<WhiteBoard> {
   late Size _canvasSize;
   final _key = GlobalKey();
   late Widget _newWidget;
+  File? newFile = null;
   // convert current canvas to image data.
+  Future<ui.Image> _loadImageFromProvider(ImageProvider provider) async {
+    final completer = Completer<ui.Image>();
+    final imageStream = provider.resolve(ImageConfiguration());
+    final listener = ImageStreamListener((ImageInfo info, bool _) {
+      completer.complete(info.image);
+    });
+    imageStream.addListener(listener);
+    return completer.future;
+  }
+
   Future<File> _convertToImage(
       ui.ImageByteFormat format, String fileName) async {
     debugPrint(fileName);
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
-
+    final image = await decodeImageFromList(await newFile!.readAsBytes());
+    canvas.drawImage(image, Offset(0, 0), Paint());
     // Emulate painting using _FreehandPainter
     // recorder will record this painting
     FreehandPainter(_strokes, widget.backgroundColor, widget.currentfile)
@@ -219,15 +232,16 @@ class _WhiteBoardState extends State<WhiteBoard> {
             event.size <= 0.1);
   }
 
-  Future<void> mainFUn(FreehandPainter freehandPainter) async {
-    if (widget.currentfile != null) {
-       File newFile = await freehandPainter.loadPdf();
-    
+  Widget buildWidget(FreehandPainter freehandPainter) {
+    debugPrint("buildWidget");
+    if (newFile != null) {
+      debugPrint("buildWidget file is not null");
       Widget newWidget = Stack(
         children: [
           // Display the image from the file
-         
-          Image.file(newFile),
+          Image.file(
+            newFile!,
+          ),
           // Overlay custom drawings using CustomPaint
           CustomPaint(
             painter: freehandPainter,
@@ -235,8 +249,34 @@ class _WhiteBoardState extends State<WhiteBoard> {
         ],
       );
       debugPrint("finished assigning new widget");
+      return newWidget;
+    } else {
+      debugPrint("buildWidget file is null");
+      FreehandPainter freehandPainter =
+          FreehandPainter(_strokes, widget.backgroundColor, widget.currentfile);
+      return CustomPaint(
+        painter: freehandPainter,
+      );
+    }
+  }
+
+  Future<void> mainFUn(FreehandPainter freehandPainter) async {
+    if (widget.currentfile != null) {
+      newFile = await freehandPainter.loadPdf(widget.currentfile);
+      debugPrint("will assign new widget");
       setState(() {
-        _newWidget = newWidget;
+        _newWidget = Stack(
+          children: [
+            // Display the image from the file
+            Image.file(
+              newFile!,
+            ),
+            // Overlay custom drawings using CustomPaint
+            CustomPaint(
+              painter: freehandPainter,
+            ),
+          ],
+        );
       });
     }
   }
@@ -311,7 +351,9 @@ class _WhiteBoardState extends State<WhiteBoard> {
                     /* Future.delayed(Duration(seconds:30));
                     debugPrint("goto return");
                     return newWidget;*/
-
+                    //FreehandPainter freehandPainter = FreehandPainter(
+                     //   _strokes, widget.backgroundColor, widget.currentfile);
+                    //buildWidget(freehandPainter);
                     debugPrint("will return newWidget");
                     return _newWidget;
                   }),
@@ -414,3 +456,4 @@ class _WhiteBoardState extends State<WhiteBoard> {
     );
   }
 }
+

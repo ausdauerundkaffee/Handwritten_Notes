@@ -46,9 +46,9 @@ class FreehandPainter extends CustomPainter {
     return completer.future;
   }
 
-  Future<File> loadPdf() async {
-    debugPrint(" start loadPdf $currentfile ");
-    final doc = await PdfDocument.openFile(currentfile);
+  Future<File> loadPdf(currFile) async {
+    debugPrint(" start loadPdf $currFile ");
+    final doc = await PdfDocument.openFile(currFile);
     final pages = doc.pageCount;
     List<imglib.Image> images = [];
 
@@ -80,7 +80,7 @@ images.forEach((element) {
 });*/
 
 // Save image as a file
-    imageFilePath = currentfile.toString().replaceAll(RegExp(r'pdf'), 'png');
+    imageFilePath = currFile.toString().replaceAll(RegExp(r'pdf'), 'png');
     File newFile = await File(imageFilePath!).writeAsBytes(imglib.encodeJpg(images[0]));
     debugPrint("image file path $imageFilePath");
     /*final data = await File(imageFilePath!).readAsBytes();
@@ -134,10 +134,10 @@ images.forEach((element) {
         canvas.drawPath(stroke.path, paint);
       }
       canvas.restore();
-    } /*else {
+    } else {
       debugPrint("currentfile exists $currentfile");
       //ui.Image  currentImage = await _loadPdf();
-      debugPrint("Start draw with image path $imageFilePath");
+     /* debugPrint("Start draw with image path $imageFilePath");
       () async {
        
      canvas.clipRect(Rect.fromLTWH(0, 0, size.width, size.height));
@@ -158,7 +158,7 @@ images.forEach((element) {
       canvas.saveLayer(Rect.fromLTWH(0, 0, size.width, size.height), Paint());
 
     
-      //canvas.drawImage(currentImage, Offset(0, 0), Paint());
+      //canvas.drawImage(currentImage, Offset(0, 0), Paint());*/
         for (final stroke in strokes) {
           final paint = Paint()
             ..strokeWidth = stroke.width
@@ -169,8 +169,8 @@ images.forEach((element) {
           canvas.drawPath(stroke.path, paint);
         }
 
-        canvas.restore();
-    }*/
+        //canvas.restore();
+    }
   }
 
   @override
